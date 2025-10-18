@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["core"]
+
+[workspace.package]
+authors = ["Travis Brown <travisrobertbrown@gmail.com>"]
+homepage = "https://github.com/travisbrown/scraper-trail"
+repository = "https://github.com/travisbrown/scraper-trail"
+keywords = ["twitter"]
+edition = "2024"
+license = "GPL-3.0-only"
+version = "0.1.0"
+
+[workspace.dependencies]
+bounded-static = "0.8"
+bounded-static-derive-more = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+http = "1"
+indexmap = { version = "2", features = ["serde"] }
+quickcheck = "1"
+regex = "1"
+reqwest = { version = "0.12", features = ["cookies", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde-field-attributes = "0.1"
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+url = "2"
+urlencoding = "2"
