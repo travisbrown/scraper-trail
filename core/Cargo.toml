@@ -1,0 +1,25 @@
+[package]
+name = "scraper-trail"
+authors = { workspace = true }
+repository = { workspace = true }
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+
+[dependencies]
+bounded-static = { workspace = true }
+bounded-static-derive-more = { workspace = true }
+chrono = { workspace = true }
+http = { workspace = true }
+indexmap = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+serde-field-attributes = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+url = { workspace = true }
+
+[dev-dependencies]
+quickcheck = { workspace = true }
+regex = { workspace = true }
+urlencoding = { workspace = true }
