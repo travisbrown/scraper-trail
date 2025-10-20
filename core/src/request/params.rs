@@ -31,5 +31,5 @@ impl ParseError {
 
 pub trait Params<'a>: Sized {
     fn parse_request(request: &Request<'a>) -> Result<Self, ParseError>;
-    fn request(&'a self, timestamp: Option<DateTime<Utc>>) -> Request<'a>;
+    fn build_request(&'a self, timestamp: Option<DateTime<Utc>>) -> Request<'a>;
 }

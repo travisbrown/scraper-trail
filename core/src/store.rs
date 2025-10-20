@@ -36,49 +36,27 @@ impl Store {
         Ok(paths)
     }
 
-    #[must_use]
-    pub fn contents(&self, reverse: bool) -> Contents<'_> {
-        Contents {
-            base: Some(&self.base),
-            reverse,
-            paths: vec![],
-        }
+    pub fn contents(&self, reverse: bool) -> Result<Contents, std::io::Error> {
+        Ok(Contents {
+            // We put the paths in reverse order, since we'll be popping them off the `Vec`.
+            paths: self.paths(!reverse)?,
+        })
     }
 }
 
-pub struct Contents<'a> {
-    base: Option<&'a Path>,
-    reverse: bool,
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Contents {
     paths: Vec<PathBuf>,
 }
 
-impl Iterator for Contents<'_> {
-    type Item = Result<String, Error>;
+impl Iterator for Contents {
+    type Item = (PathBuf, Result<String, Error>);
 
     fn next(&mut self) -> Option<Self::Item> {
-        match self.base.take() {
-            Some(base) => match std::fs::read_dir(base).and_then(|entries| {
-                entries
-                    .map(|entry| entry.map(|entry| entry.path()))
-                    .collect::<Result<Vec<_>, _>>()
-            }) {
-                Ok(mut paths) => {
-                    paths.sort();
+        self.paths.pop().map(|path| {
+            let contents = std::fs::read_to_string(&path).map_err(Error::from);
 
-                    // We put the paths in reverse order, since we'll be popping them off the `Vec`.
-                    if !self.reverse {
-                        paths.reverse();
-                    }
-
-                    self.paths = paths;
-                    self.next()
-                }
-                Err(error) => Some(Err(Error::from(error))),
-            },
-            None => self
-                .paths
-                .pop()
-                .map(|path| std::fs::read_to_string(path).map_err(Error::from)),
-        }
+            (path, contents)
+        })
     }
 }
