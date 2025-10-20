@@ -21,6 +21,15 @@ pub struct Exchange<'a, T> {
     pub response: Response<'a, T>,
 }
 
+impl<'a, T> Exchange<'a, T> {
+    pub fn map<U, F: FnOnce(T) -> U>(self, f: F) -> Exchange<'a, U> {
+        Exchange {
+            request: self.request,
+            response: self.response.map(f),
+        }
+    }
+}
+
 impl<'a, T: IntoBoundedStatic + 'a> IntoBoundedStatic for Exchange<'a, T> {
     type Static = Exchange<'static, T::Static>;
 
@@ -71,6 +80,13 @@ impl<'a, T> Response<'a, T> {
             headers: self.headers,
             data: f(self.data),
         }
+    }
+
+    pub fn and_then<U, E, F: FnOnce(T) -> Result<U, E>>(self, f: F) -> Result<Response<'a, U>, E> {
+        f(self.data).map(|new_data| Response {
+            headers: self.headers,
+            data: new_data,
+        })
     }
 }
 

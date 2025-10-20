@@ -23,10 +23,10 @@ pub enum Error {
 }
 
 pub async fn json_send<'a>(
-    request: Request<'a>,
     client: &reqwest::Client,
+    request: Request<'a>,
 ) -> Result<crate::exchange::Exchange<'a, serde_json::Value>, Error> {
-    let builder = build_request(&request, client)?;
+    let builder = build_request(client, &request)?;
     let response = builder.send().await?;
     let status_code = response.status();
     let headers = response.headers();
@@ -50,9 +50,37 @@ pub async fn json_send<'a>(
     }
 }
 
-fn build_request<'a>(
-    request: &'a Request<'a>,
+pub async fn text_send<'a>(
     client: &reqwest::Client,
+    request: Request<'a>,
+) -> Result<crate::exchange::Exchange<'a, String>, Error> {
+    let builder = build_request(client, &request)?;
+    let response = builder.send().await?;
+    let status_code = response.status();
+    let headers = response.headers();
+    let headers = response_headers_to_index_map(headers)?;
+
+    if status_code == StatusCode::OK {
+        let text = response.text().await?;
+
+        Ok(Exchange {
+            request,
+            response: Response {
+                headers,
+                data: text,
+            },
+        })
+    } else {
+        // We attempt to retrieve the body for better error messages, but ignore any failure here.
+        let body = response.text().await.ok();
+
+        Err(Error::UnexpectedStatus { status_code, body })
+    }
+}
+
+fn build_request<'a>(
+    client: &reqwest::Client,
+    request: &'a Request<'a>,
 ) -> Result<reqwest::RequestBuilder, crate::request::HeaderError> {
     let builder = client
         .request(request.method.clone(), request.url.clone())

@@ -131,7 +131,7 @@ mod tests {
             Ok(Self { pagination, review })
         }
 
-        fn request(
+        fn build_request(
             &'a self,
             _timestamp: Option<chrono::DateTime<chrono::Utc>>,
         ) -> crate::request::Request<'a> {
