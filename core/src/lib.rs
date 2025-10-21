@@ -6,4 +6,3 @@ pub mod client;
 pub mod exchange;
 pub mod multi_value;
 pub mod request;
-pub mod store;

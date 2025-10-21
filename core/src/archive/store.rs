@@ -6,8 +6,6 @@ pub enum Error {
     Io(#[from] std::io::Error),
     #[error("JSON error")]
     Json(#[from] serde_json::Error),
-    #[error("Exchange error")]
-    Exchange(#[from] crate::exchange::Error),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

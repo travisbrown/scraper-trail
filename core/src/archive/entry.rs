@@ -1,5 +1,6 @@
 use crate::{
-    exchange::{Exchange, Response},
+    archive::Archiveable,
+    exchange::Exchange,
     request::{Request, params::Params},
 };
 use std::borrow::Cow;
@@ -11,29 +12,20 @@ pub enum Field {
     Response,
 }
 
-pub trait Archiveable: Sized {
-    type RequestParams<'a>: crate::request::params::Params<'a>;
-
-    fn read_response<'a, 'de: 'a, A: serde::de::MapAccess<'de>>(
-        request_params: &Self::RequestParams<'a>,
-        map: &mut A,
-    ) -> Result<Option<(Field, Response<'a, Self>)>, A::Error>;
-}
-
-pub struct Archive<'a, T: Archiveable> {
+pub struct Entry<'a, T: Archiveable> {
     pub request_params: T::RequestParams<'a>,
     pub exchange: Exchange<'a, T>,
 }
 
-impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Archive<'a, T> {
+impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Entry<'a, T> {
     fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        struct ArchiveVisitor<'a, T>(std::marker::PhantomData<&'a T>);
+        struct EntryVisitor<'a, T>(std::marker::PhantomData<&'a T>);
 
-        impl<'a, 'de: 'a, T: Archiveable> serde::de::Visitor<'de> for ArchiveVisitor<'a, T> {
-            type Value = Archive<'a, T>;
+        impl<'a, 'de: 'a, T: Archiveable> serde::de::Visitor<'de> for EntryVisitor<'a, T> {
+            type Value = Entry<'a, T>;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("Exchange archive")
+                formatter.write_str("scraper exchange archive entry")
             }
 
             fn visit_map<A: serde::de::MapAccess<'de>>(
@@ -54,7 +46,7 @@ impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Archive<'
                 let request_params = T::RequestParams::parse_request(&request)
                     .map_err(|error| error.serde(&request))?;
 
-                let response = T::read_response(&request_params, &mut map)?
+                let response = T::deserialize_response_field(&request_params, &mut map)?
                     .and_then(|(field, data)| {
                         if field == Field::Response {
                             Some(data)
@@ -69,7 +61,7 @@ impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Archive<'
                         &field,
                         &["request", "response"],
                     )),
-                    None => Ok(Archive {
+                    None => Ok(Entry {
                         request_params,
                         exchange: Exchange { request, response },
                     }),
@@ -77,23 +69,23 @@ impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Archive<'
             }
         }
 
-        deserializer.deserialize_map(ArchiveVisitor(std::marker::PhantomData))
+        deserializer.deserialize_map(EntryVisitor(std::marker::PhantomData))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Archive, Archiveable, Field};
+    use super::{Archiveable, Entry, Field};
     use crate::exchange::Response;
     use regex::Regex;
     use std::borrow::Cow;
     use std::sync::LazyLock;
 
-    const GOOGLE_PLAY_01_EXAMPLE: &str = include_str!("../../examples/google-play-01.json");
+    const GOOGLE_PLAY_01_EXAMPLE: &str = include_str!("../../../examples/google-play-01.json");
 
     #[test]
     fn deserialize_google_archive() -> Result<(), Box<dyn std::error::Error>> {
-        let archive = serde_json::from_str::<Archive<'_, GoogleData>>(GOOGLE_PLAY_01_EXAMPLE)?;
+        let archive = serde_json::from_str::<Entry<'_, GoogleData>>(GOOGLE_PLAY_01_EXAMPLE)?;
 
         assert_eq!(archive.request_params.pagination.country, "us");
         assert_eq!(archive.request_params.review.app_id, "ai.chesslegends");
@@ -111,6 +103,14 @@ mod tests {
     }
 
     impl<'a> crate::request::params::Params<'a> for ReviewRequest<'a> {
+        fn build_request(
+            &'a self,
+            _timestamp: Option<chrono::DateTime<chrono::Utc>>,
+        ) -> crate::request::Request<'a> {
+            // Not tested here.
+            todo![]
+        }
+
         fn parse_request(
             request: &crate::request::Request<'_>,
         ) -> Result<Self, crate::request::params::ParseError> {
@@ -130,14 +130,6 @@ mod tests {
 
             Ok(Self { pagination, review })
         }
-
-        fn build_request(
-            &'a self,
-            _timestamp: Option<chrono::DateTime<chrono::Utc>>,
-        ) -> crate::request::Request<'a> {
-            // Not tested here.
-            todo![]
-        }
     }
 
     enum GoogleData {
@@ -147,7 +139,7 @@ mod tests {
     impl Archiveable for GoogleData {
         type RequestParams<'a> = ReviewRequest<'a>;
 
-        fn read_response<'a, 'de: 'a, A: serde::de::MapAccess<'de>>(
+        fn deserialize_response_field<'a, 'de: 'a, A: serde::de::MapAccess<'de>>(
             _request_params: &Self::RequestParams<'a>,
             map: &mut A,
         ) -> Result<Option<(Field, Response<'a, Self>)>, A::Error> {
