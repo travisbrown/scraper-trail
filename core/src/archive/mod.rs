@@ -4,10 +4,10 @@ pub mod entry;
 pub mod store;
 
 pub trait Archiveable: Sized {
-    type RequestParams<'a>: crate::request::params::Params<'a>;
+    type RequestParams: crate::request::params::Params;
 
-    fn deserialize_response_field<'a, 'de: 'a, A: serde::de::MapAccess<'de>>(
-        request_params: &Self::RequestParams<'a>,
+    fn deserialize_response_field<'de, A: serde::de::MapAccess<'de>>(
+        request_params: &Self::RequestParams,
         map: &mut A,
-    ) -> Result<Option<(Field, Response<'a, Self>)>, A::Error>;
+    ) -> Result<Option<(Field, Response<'de, Self>)>, A::Error>;
 }

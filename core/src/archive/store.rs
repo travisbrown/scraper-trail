@@ -1,4 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::{
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
+
+use crate::archive::Archiveable;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -40,6 +45,13 @@ impl Store {
             paths: self.paths(!reverse)?,
         })
     }
+
+    pub fn entries<T>(&self, reverse: bool) -> Result<Entries<T>, std::io::Error> {
+        Ok(Entries {
+            contents: self.contents(reverse)?,
+            _target: PhantomData,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,13 +60,44 @@ pub struct Contents {
 }
 
 impl Iterator for Contents {
-    type Item = (PathBuf, Result<String, Error>);
+    type Item = (PathBuf, Result<String, std::io::Error>);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.paths.pop().map(|path| {
-            let contents = std::fs::read_to_string(&path).map_err(Error::from);
+            let contents = std::fs::read_to_string(&path);
 
             (path, contents)
+        })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Entries<T> {
+    contents: Contents,
+    _target: PhantomData<T>,
+}
+
+use bounded_static::IntoBoundedStatic;
+
+impl<T: Archiveable + IntoBoundedStatic> Iterator for Entries<T>
+where
+    T::Static: Archiveable,
+    T::RequestParams: Into<<T::Static as Archiveable>::RequestParams>,
+{
+    type Item = (
+        PathBuf,
+        Result<crate::archive::entry::Entry<'static, T::Static>, Error>,
+    );
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.contents.next().map(|(path, contents)| {
+            let entry = contents.map_err(Error::from).and_then(|contents| {
+                serde_json::from_str::<crate::archive::entry::Entry<'_, T>>(&contents)
+                    .map(bounded_static::IntoBoundedStatic::into_static)
+                    .map_err(Error::from)
+            });
+
+            (path, entry)
         })
     }
 }

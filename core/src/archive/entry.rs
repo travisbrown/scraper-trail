@@ -13,8 +13,24 @@ pub enum Field {
 }
 
 pub struct Entry<'a, T: Archiveable> {
-    pub request_params: T::RequestParams<'a>,
+    pub request_params: T::RequestParams,
     pub exchange: Exchange<'a, T>,
+}
+
+impl<T: Archiveable + bounded_static::IntoBoundedStatic> bounded_static::IntoBoundedStatic
+    for Entry<'_, T>
+where
+    T::Static: Archiveable,
+    T::RequestParams: Into<<T::Static as Archiveable>::RequestParams>,
+{
+    type Static = Entry<'static, T::Static>;
+
+    fn into_static(self) -> Self::Static {
+        Self::Static {
+            request_params: self.request_params.into(),
+            exchange: self.exchange.into_static(),
+        }
+    }
 }
 
 impl<'a, 'de: 'a, T: Archiveable + 'a> serde::de::Deserialize<'de> for Entry<'a, T> {
@@ -102,11 +118,11 @@ mod tests {
         review: Review,
     }
 
-    impl<'a> crate::request::params::Params<'a> for ReviewRequest<'a> {
+    impl<'a> crate::request::params::Params for ReviewRequest<'a> {
         fn build_request(
-            &'a self,
+            &self,
             _timestamp: Option<chrono::DateTime<chrono::Utc>>,
-        ) -> crate::request::Request<'a> {
+        ) -> crate::request::Request<'_> {
             // Not tested here.
             todo![]
         }
@@ -137,14 +153,14 @@ mod tests {
     }
 
     impl Archiveable for GoogleData {
-        type RequestParams<'a> = ReviewRequest<'a>;
+        type RequestParams = ReviewRequest<'static>;
 
-        fn deserialize_response_field<'a, 'de: 'a, A: serde::de::MapAccess<'de>>(
-            _request_params: &Self::RequestParams<'a>,
+        fn deserialize_response_field<'de, A: serde::de::MapAccess<'de>>(
+            _request_params: &Self::RequestParams,
             map: &mut A,
-        ) -> Result<Option<(Field, Response<'a, Self>)>, A::Error> {
+        ) -> Result<Option<(Field, Response<'de, Self>)>, A::Error> {
             Ok(map
-                .next_entry::<Field, Response<'a, serde_json::Value>>()?
+                .next_entry::<Field, Response<'_, serde_json::Value>>()?
                 .map(|(field, response)| (field, response.map(|value| GoogleData::Review(value)))))
         }
     }

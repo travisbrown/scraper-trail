@@ -29,7 +29,7 @@ impl ParseError {
     }
 }
 
-pub trait Params<'a>: Sized {
-    fn build_request(&'a self, timestamp: Option<DateTime<Utc>>) -> Request<'a>;
-    fn parse_request(request: &Request<'a>) -> Result<Self, ParseError>;
+pub trait Params: Sized {
+    fn build_request(&self, timestamp: Option<DateTime<Utc>>) -> Request<'_>;
+    fn parse_request(request: &Request<'_>) -> Result<Self, ParseError>;
 }
