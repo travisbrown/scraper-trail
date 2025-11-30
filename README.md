@@ -13,6 +13,15 @@ You can see examples of its use in [this Rust library][app-store-access] for acc
 data from the Google and Apple app stores, and in this [Meta Ads Archive client][meta-ads-scraper].
 We are also using it in a couple of other contexts where the client software is not currently open source.
 
+## Status
+
+This library currently provides some basic functionality for defining bindings for API or web requests
+and responses, and for storing accessed data in a format that records detailed information about requests
+and responses. While it is functional in this capacity for the range of platforms we are using it to access,
+future versions (possibly under a different name) are likely to include additional functionality, both on
+the access side (for example authentication, error retries, scheduling) and on the storage side (indexing,
+export to other platforms or formats).
+
 ## License
 
 This software is licensed under the [GNU General Public License v3.0][gpl-v3] (GPL-3.0).
