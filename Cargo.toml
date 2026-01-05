@@ -19,7 +19,7 @@ http = "1"
 indexmap = { version = "2", features = ["serde"] }
 quickcheck = "1"
 regex = "1"
-reqwest = { version = "0.12", features = ["cookies", "json"] }
+reqwest = { version = "0.13", features = ["cookies", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde-field-attributes = "0.1"
 serde_json = { version = "1", features = ["preserve_order"] }
