@@ -1,5 +1,6 @@
 [package]
 name = "scraper-trail"
+description = "Scraping framework and tools"
 authors = { workspace = true }
 repository = { workspace = true }
 version = { workspace = true }
