@@ -54,19 +54,16 @@ impl<'a> AsRef<Cow<'a, str>> for MultiValue<'a> {
 impl<'a, S: Into<Cow<'a, str>>> TryFrom<Vec<S>> for MultiValue<'a> {
     type Error = Error;
 
-    fn try_from(mut value: Vec<S>) -> Result<Self, Self::Error> {
-        if value.is_empty() {
-            Err(Error::Empty)
-        } else {
-            let first = value.remove(0).into();
-            let rest = if value.is_empty() {
-                None
-            } else {
-                Some(value.into_iter().map(std::convert::Into::into).collect())
-            };
+    fn try_from(value: Vec<S>) -> Result<Self, Self::Error> {
+        let mut values = value.into_iter();
 
-            Ok(Self { first, rest })
-        }
+        let first = values.next().ok_or(Error::Empty)?.into();
+        let rest: Vec<Cow<'a, str>> = values.map(Into::into).collect();
+
+        Ok(Self {
+            first,
+            rest: if rest.is_empty() { None } else { Some(rest) },
+        })
     }
 }
 
@@ -88,15 +85,22 @@ impl<'a> Iterator for Iter<'a> {
     type Item = Cow<'a, str>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.first.take().or_else(|| {
-            self.rest.take().and_then(|mut rest| {
-                let next = rest.next().cloned();
-                self.rest = Some(rest);
-                next
-            })
-        })
+        if let Some(first) = self.first.take() {
+            Some(first)
+        } else {
+            self.rest.as_mut()?.next().cloned()
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = usize::from(self.first.is_some())
+            + self.rest.as_ref().map_or(0, ExactSizeIterator::len);
+
+        (len, Some(len))
     }
 }
+
+impl ExactSizeIterator for Iter<'_> {}
 
 impl<'a, 'de: 'a> serde::de::Deserialize<'de> for MultiValue<'a> {
     fn deserialize<D: serde::de::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
