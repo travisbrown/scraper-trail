@@ -140,7 +140,7 @@ mod tests {
                 .body
                 .as_ref()
                 .and_then(|body| body.parse().ok())
-                .ok_or_else(|| crate::request::params::ParseError::InvalidUrl {
+                .ok_or_else(|| crate::request::params::ParseError::InvalidBody {
                     expected: "Google review pagination request",
                 })?;
 
