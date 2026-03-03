@@ -61,7 +61,11 @@ impl<T: serde::ser::Serialize> Exchange<'_, T> {
             self.request.timestamp.timestamp_millis()
         ));
 
-        std::fs::write(&output_path, serde_json::json!(self).to_string())?;
+        // We assume serialization failures are rare and don't need a separate error
+        // representation.
+        let json = serde_json::to_string(self).map_err(std::io::Error::other)?;
+
+        std::fs::write(&output_path, json)?;
 
         Ok(output_path)
     }
