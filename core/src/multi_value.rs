@@ -39,7 +39,7 @@ impl<'a> MultiValue<'a> {
     #[must_use]
     pub fn iter(&'a self) -> Iter<'a> {
         Iter {
-            first: Some(self.first.clone()),
+            first: Some(Cow::Borrowed(self.first.as_ref())),
             rest: self.rest.as_ref().map(|rest| rest.iter()),
         }
     }
