@@ -8,9 +8,9 @@ use std::path::{Path, PathBuf};
 pub enum Error {
     #[error("URL parse error")]
     UrlParse(#[from] url::ParseError),
-    #[error("Header value error")]
+    #[error("Invalid request header value")]
     RequestHeaderValue(#[from] http::header::InvalidHeaderValue),
-    #[error("Header value error")]
+    #[error("Invalid response header value")]
     ResponseHeaderValue(#[from] http::header::ToStrError),
 }
 
